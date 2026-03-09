@@ -1,0 +1,27 @@
+{
+  "name": "sage-timesheet-scripting",
+  "version": "1.0.0",
+  "description": "A TypeScript project for managing timesheets.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "timesheet",
+    "typescript",
+    "scripting"
+  ],
+  "author": "Andras Toth",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.0.0",
+    "jest": "^27.0.0",
+    "ts-jest": "^27.0.0",
+    "typescript": "^4.0.0"
+  }
+}
