@@ -58,7 +58,7 @@ BYPASS_DATE_CHECK=true npm run dev
 
 ## Docker
 
-The recommended way to run SageSubmitter on a server. Built on top of `ghcr.io/puppeteer/puppeteer:latest` which includes Chrome — no separate Chrome install needed.
+The recommended way to run SageSubmitter on a server. Uses a `node:20-slim` base with Chromium from apt (~500 MB vs ~2 GB for the full puppeteer image) — no separate Chrome install needed.
 
 **Build:**
 
