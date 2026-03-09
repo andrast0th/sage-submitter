@@ -56,23 +56,55 @@ npm start
 BYPASS_DATE_CHECK=true npm run dev
 ```
 
+## Docker
+
+The recommended way to run SageSubmitter on a server. Built on top of `ghcr.io/puppeteer/puppeteer:latest` which includes Chrome — no separate Chrome install needed.
+
+**Build:**
+
+```bash
+docker build -t sage-submitter .
+```
+
+**Run (passing credentials at runtime — never bake them into the image):**
+
+```bash
+docker run --rm \
+  -e SAGE_BASE_URL=https://yourcompany.sage.hr \
+  -e SAGE_EMAIL=your@email.com \
+  -e SAGE_PASSWORD=yourpassword \
+  -e DAYS_BEFORE_MONTH_END=4 \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e TELEGRAM_CHAT_ID=your_chat_id \
+  sage-submitter
+```
+
+Or store credentials in an env file on the server (not committed to the repo) and reference it:
+
+```bash
+docker run --rm --env-file /etc/sage-submitter/prod.env sage-submitter
+```
+
+> `CHROME_PATH` and `HEADLESS=true` are already set inside the image — no need to pass them.
+
 ## Cron job setup
 
 The script includes a built-in date guard so it safely runs daily — it will skip non-target days automatically.
 
-**Option 1 — Run every weekday (simplest):**
+**Docker (recommended for server deployments):**
 
 ```bash
-# Runs at 9am every weekday; the script skips non-target days on its own
-0 9 * * 1-5 cd /path/to/sage-submitter && npm start
+# Option 1 — daily, simplest
+0 9 * * 1-5 docker run --rm --env-file /etc/sage-submitter/prod.env sage-submitter
+
+# Option 2 — only last days of the month (adjust start day for your DAYS_BEFORE_MONTH_END)
+0 9 24-31 * 1-5 docker run --rm --env-file /etc/sage-submitter/prod.env sage-submitter
 ```
 
-**Option 2 — Run only in the last days of the month (more efficient):**
+**Without Docker (local/bare-metal):**
 
 ```bash
-# For DAYS_BEFORE_MONTH_END=4, run on days 24–31 to cover the trigger & reminder days
-# Adjust the start day if you change DAYS_BEFORE_MONTH_END (use ~last N+4 calendar days as buffer)
-0 9 24-31 * 1-5 cd /path/to/sage-submitter && npm start
+0 9 * * 1-5 cd /path/to/sage-submitter && npm start
 ```
 
 > Option 2 saves unnecessary runs but requires manual adjustment if you change `DAYS_BEFORE_MONTH_END`. The buffer of N+4 calendar days accounts for weekends shifting working days earlier.
