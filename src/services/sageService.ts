@@ -1,5 +1,6 @@
 import puppeteer, { Browser, ElementHandle, Page } from "puppeteer-core";
 import config from "../config";
+import logger from "../logger";
 
 export class SageService {
   private browser: Browser | null = null;
@@ -9,7 +10,10 @@ export class SageService {
    * Launch headless Chrome and create a page.
    */
   async init(): Promise<void> {
-    console.log("Launching headless Chrome...");
+    logger.info(
+      { headless: config.headless, chromePath: config.chromePath },
+      "Launching Chrome...",
+    );
     this.browser = await puppeteer.launch({
       executablePath: config.chromePath,
       headless: config.headless,
@@ -29,7 +33,7 @@ export class SageService {
     await this.page.setUserAgent(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     );
-    console.log("Browser ready.");
+    logger.info("Browser ready.");
   }
 
   /**
@@ -40,21 +44,20 @@ export class SageService {
       throw new Error("Browser not initialized. Call init() first.");
 
     const signinUrl = `${config.sage.baseUrl}/signin`;
-    console.log(`Navigating to: ${signinUrl}`);
+    logger.info({ url: signinUrl }, "Navigating to sign-in page.");
     await this.page.goto(signinUrl, { waitUntil: "networkidle2" });
 
     // Fill in email
-    console.log("Filling in email...");
+    logger.info("Filling in credentials...");
     await this.page.waitForSelector("#user_email");
     await this.page.type("#user_email", config.sage.email, { delay: 50 });
 
     // Fill in password
-    console.log("Filling in password...");
     await this.page.waitForSelector("#user_password");
     await this.page.type("#user_password", config.sage.password, { delay: 50 });
 
     // Submit the form
-    console.log("Submitting sign-in form...");
+    logger.info("Submitting sign-in form...");
     await Promise.all([
       this.page.waitForNavigation({ waitUntil: "networkidle2" }),
       this.page.$eval("#new_user", (form) =>
@@ -62,7 +65,7 @@ export class SageService {
       ),
     ]);
 
-    console.log(`Signed in. Current URL: ${this.page.url()}`);
+    logger.info({ url: this.page.url() }, "Signed in.");
   }
 
   /**
@@ -77,17 +80,17 @@ export class SageService {
       () => window.location.pathname.includes("/dashboard"),
       { timeout: 10000 },
     );
-    console.log("Dashboard loaded.");
+    logger.info("Dashboard loaded.");
 
     // Click the Timesheets menu button
-    console.log('Clicking "Timesheets" menu...');
+    logger.info("Clicking Timesheets menu...");
     await this.page.waitForSelector("#main_menu_timesheets", { visible: true });
     await Promise.all([
       this.page.waitForNavigation({ waitUntil: "networkidle2" }),
       this.page.click("#main_menu_timesheets"),
     ]);
 
-    console.log(`Timesheets page loaded. Current URL: ${this.page.url()}`);
+    logger.info({ url: this.page.url() }, "Timesheets page loaded.");
   }
 
   /**
@@ -98,7 +101,7 @@ export class SageService {
     if (!this.page)
       throw new Error("Browser not initialized. Call init() first.");
 
-    console.log("Verifying selected period matches current month...");
+    logger.info("Verifying selected period matches current month...");
 
     const selectedValue = await this.page.evaluate(() => {
       const select = document.querySelector<HTMLSelectElement>(
@@ -122,8 +125,12 @@ export class SageService {
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // getMonth() is 0-indexed
 
-    console.log(
-      `Selected period: ${selectedYear}-${String(selectedMonth).padStart(2, "0")} | Current: ${currentYear}-${String(currentMonth).padStart(2, "0")}`,
+    logger.info(
+      {
+        selected: `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`,
+        current: `${currentYear}-${String(currentMonth).padStart(2, "0")}`,
+      },
+      "Period check.",
     );
 
     if (selectedYear !== currentYear || selectedMonth !== currentMonth) {
@@ -132,7 +139,7 @@ export class SageService {
       );
     }
 
-    console.log("Period matches current month. Proceeding.");
+    logger.info("Period matches current month. Proceeding.");
   }
 
   /**
@@ -174,7 +181,7 @@ export class SageService {
     await this.page.waitForSelector("#vue-timesheets-manager", {
       timeout: 10000,
     });
-    console.log("Timesheets manager loaded.");
+    logger.info("Timesheets manager loaded.");
 
     // Verify the selected period is the current month before submitting
     await this.verifyCurrentMonth();
@@ -182,13 +189,13 @@ export class SageService {
     // Check if the timesheet is already submitted
     const alreadySubmitted = await this.hasWithdrawButton();
     if (alreadySubmitted) {
-      console.log(
+      logger.info(
         "Timesheet for this period is already submitted. Nothing to do.",
       );
       return false;
     }
 
-    console.log("Waiting for Submit button...");
+    logger.info("Waiting for Submit button...");
 
     // Wait for the Submit button to appear (Vue app renders async)
     await this.page.waitForFunction(
@@ -211,7 +218,7 @@ export class SageService {
       },
       { timeout: 30000, polling: 500 },
     );
-    console.log("Submit button appeared.");
+    logger.info("Submit button appeared.");
 
     // Now find and return the button
     const submitButton = await this.page.evaluateHandle(() => {
@@ -259,9 +266,9 @@ export class SageService {
       );
     }
 
-    console.log('Clicking "Submit" button...');
+    logger.info("Clicking Submit button...");
     await element.click();
-    console.log("Timesheet submit initiated.");
+    logger.info("Timesheet submit initiated.");
 
     // Confirm submission in the modal dialog
     await this.confirmSubmitModal();
@@ -269,7 +276,7 @@ export class SageService {
     // Final sanity-check: the Submit button should now be replaced by "Withdraw timesheet"
     await this.verifyWithdrawButtonAppears();
 
-    console.log("Timesheet submitted.");
+    logger.info("Timesheet submitted.");
     return true;
   }
 
@@ -281,15 +288,15 @@ export class SageService {
     if (!this.page)
       throw new Error("Browser not initialized. Call init() first.");
 
-    console.log(
-      'Waiting for "Withdraw timesheet" button to confirm submission...',
+    logger.info(
+      "Waiting for Withdraw timesheet button to confirm submission...",
     );
 
     const deadline = Date.now() + 15_000;
     while (Date.now() < deadline) {
       if (await this.hasWithdrawButton()) {
-        console.log(
-          '"Withdraw timesheet" button appeared. Submission confirmed.',
+        logger.info(
+          "Withdraw timesheet button appeared. Submission confirmed.",
         );
         return;
       }
@@ -308,7 +315,7 @@ export class SageService {
     if (!this.page)
       throw new Error("Browser not initialized. Call init() first.");
 
-    console.log("Waiting for confirmation modal...");
+    logger.info("Waiting for confirmation modal...");
 
     // Try multiple selectors for the modal - Carbon UI may use different attributes
     const modalSelectors = [
@@ -326,7 +333,7 @@ export class SageService {
           visible: true,
           timeout: 5000,
         });
-        console.log(`Confirmation modal detected with: ${selector}`);
+        logger.info({ selector }, "Confirmation modal detected.");
         modalFound = true;
         break;
       } catch {
@@ -403,12 +410,12 @@ export class SageService {
       );
     }
 
-    console.log('Clicking modal "Submit" button...');
+    logger.info("Clicking modal Submit button...");
     await modalBtn.click();
 
     // Wait for the submission to process
     await this.page.waitForNetworkIdle({ timeout: 10000 });
-    console.log("Modal submission confirmed.");
+    logger.info("Modal submission confirmed.");
   }
 
   /**
@@ -419,7 +426,7 @@ export class SageService {
       await this.browser.close();
       this.browser = null;
       this.page = null;
-      console.log("Browser closed.");
+      logger.info("Browser closed.");
     }
   }
 }

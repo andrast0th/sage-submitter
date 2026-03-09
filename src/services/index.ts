@@ -1,3 +1,4 @@
+import logger from "../logger";
 import { SageService } from "./sageService";
 import { notifySafely } from "./telegramService";
 
@@ -12,16 +13,15 @@ export const startServices = async (): Promise<void> => {
     const submitted = await sageService.submitTimesheet();
 
     if (submitted) {
-      console.log("Timesheet was submitted.");
+      logger.info("Timesheet was submitted.");
       await notifySafely("Timesheet submitted successfully.");
     } else {
-      console.log("Timesheet was already submitted.");
+      logger.info("Timesheet was already submitted.");
     }
   } catch (error) {
     primaryError = error;
-    
     const message = error instanceof Error ? error.message : String(error);
-    console.error("Timesheet submission failed:", message);
+    logger.error({ err: error }, "Timesheet submission failed.");
     await notifySafely(`Timesheet submission failed: ${message}`);
 
     throw error;
@@ -29,10 +29,7 @@ export const startServices = async (): Promise<void> => {
     try {
       await sageService.close();
     } catch (closeError) {
-      console.error(
-        "Failed to close browser:",
-        closeError instanceof Error ? closeError.message : String(closeError),
-      );
+      logger.error({ err: closeError }, "Failed to close browser.");
       if (!primaryError) primaryError = closeError;
     }
   }

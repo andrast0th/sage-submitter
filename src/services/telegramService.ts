@@ -1,4 +1,5 @@
 import config from "../config";
+import logger from "../logger";
 
 const { botToken, chatId } = config.telegram;
 
@@ -8,9 +9,7 @@ const { botToken, chatId } = config.telegram;
  */
 export const sendTelegramMessage = async (text: string): Promise<void> => {
   if (!botToken || !chatId) {
-    console.warn(
-      "Telegram credentials not configured — skipping notification.",
-    );
+    logger.warn("Telegram credentials not configured — skipping notification.");
     return;
   }
 
@@ -25,12 +24,12 @@ export const sendTelegramMessage = async (text: string): Promise<void> => {
 
     if (!res.ok) {
       const body = await res.text();
-      console.error(`Telegram API error (${res.status}): ${body}`);
+      logger.error({ status: res.status, body }, "Telegram API error.");
     } else {
-      console.log("Telegram notification sent.");
+      logger.info("Telegram notification sent.");
     }
   } catch (error) {
-    console.error("Failed to send Telegram message:", error);
+    logger.error({ err: error }, "Failed to send Telegram message.");
   }
 };
 
@@ -38,9 +37,6 @@ export const notifySafely = async (text: string): Promise<void> => {
   try {
     await sendTelegramMessage(text);
   } catch (err) {
-    console.error(
-      "Telegram notification failed:",
-      err instanceof Error ? err.message : String(err),
-    );
+    logger.error({ err }, "Telegram notification failed.");
   }
 };
