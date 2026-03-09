@@ -2,7 +2,7 @@ import config from "./config";
 import logger from "./logger";
 import { startServices } from "./services";
 import { sendTelegramMessage } from "./services/telegramService";
-import { getReminderDate, getTriggerDate } from "./utils";
+import { getReminderDate, getTriggerDate, getLastDayOfMonth } from "./utils";
 
 const main = async () => {
   const today = new Date();
@@ -34,13 +34,14 @@ const main = async () => {
 
   if (bypassDateCheck) {
     logger.info("BYPASS_DATE_CHECK=true — skipping date check.");
-  } else if (today.getDate() !== triggerDay) {
+  } else if (today.getDate() < triggerDay) {
     const nextRun = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(triggerDay).padStart(2, "0")}`;
-    logger.info({ nextRun }, "Not the trigger date — skipping.");
+    logger.info({ nextRun }, "Before trigger date — skipping.");
     process.exit(0);
   }
 
-  logger.info({ daysBeforeMonthEnd }, "Trigger day — running timesheet fill.");
+  const lastDay = getLastDayOfMonth(today);
+  logger.info({ triggerDay, lastDay, today: today.getDate() }, "Within submission window — running timesheet fill.");
 
   try {
     await startServices();

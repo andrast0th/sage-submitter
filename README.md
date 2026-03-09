@@ -89,12 +89,12 @@ docker run --rm --env-file /etc/sage-submitter/prod.env sage-submitter
 
 ## Cron job setup
 
-The script includes a built-in date guard so it safely runs daily — it will skip non-target days automatically.
+The script includes a built-in date guard so it safely runs daily — it will skip days before the trigger date automatically. From the trigger date through the end of the month it attempts submission on every run, but exits immediately if the timesheet is already submitted.
 
 **Docker (recommended for server deployments):**
 
 ```bash
-# Option 1 — daily, simplest
+# Runs daily at 9am every weekday — safe to leave running all month
 0 9 * * 1-5 docker run --rm --env-file /etc/sage-submitter/prod.env sage-submitter
 
 # Option 2 — only last days of the month (adjust start day for your DAYS_BEFORE_MONTH_END)
@@ -106,8 +106,6 @@ The script includes a built-in date guard so it safely runs daily — it will sk
 ```bash
 0 9 * * 1-5 cd /path/to/sage-submitter && npm start
 ```
-
-> Option 2 saves unnecessary runs but requires manual adjustment if you change `DAYS_BEFORE_MONTH_END`. The buffer of N+4 calendar days accounts for weekends shifting working days earlier.
 
 ## Project structure
 
