@@ -1,16 +1,5 @@
 import { SageService } from "./sageService";
-import { sendTelegramMessage } from "./telegramService";
-
-const notifySafely = async (text: string): Promise<void> => {
-  try {
-    await sendTelegramMessage(text);
-  } catch (err) {
-    console.error(
-      "Telegram notification failed:",
-      err instanceof Error ? err.message : String(err),
-    );
-  }
-};
+import { notifySafely } from "./telegramService";
 
 export const startServices = async (): Promise<void> => {
   const sageService = new SageService();
@@ -30,9 +19,11 @@ export const startServices = async (): Promise<void> => {
     }
   } catch (error) {
     primaryError = error;
+    
     const message = error instanceof Error ? error.message : String(error);
     console.error("Timesheet submission failed:", message);
-    await sendTelegramMessage(`Timesheet submission failed: ${message}`);
+    await notifySafely(`Timesheet submission failed: ${message}`);
+
     throw error;
   } finally {
     try {

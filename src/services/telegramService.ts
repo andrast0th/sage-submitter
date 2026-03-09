@@ -33,3 +33,14 @@ export const sendTelegramMessage = async (text: string): Promise<void> => {
     console.error("Failed to send Telegram message:", error);
   }
 };
+
+export const notifySafely = async (text: string): Promise<void> => {
+  try {
+    await sendTelegramMessage(text);
+  } catch (err) {
+    console.error(
+      "Telegram notification failed:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+};
